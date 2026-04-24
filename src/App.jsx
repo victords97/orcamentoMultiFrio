@@ -21,14 +21,32 @@ function getManausDateTimeLocal() {
   return `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}`
 }
 
-function generateDocumentNumber() {
+const DOCUMENT_TYPES = {
+  budget: {
+    title: 'Orçamento',
+    prefix: 'ORC',
+    actionLabel: 'Gerar PDF do orçamento',
+  },
+  receipt: {
+    title: 'Recibo',
+    prefix: 'REC',
+    actionLabel: 'Gerar PDF do recibo',
+  },
+}
+
+const WARRANTY_OPTIONS = ['30 dias', '90 dias', '180 dias']
+const PAYMENT_OPTIONS = ['Dinheiro', 'Pix', 'Cartão/Débito', 'Cartão/Crédito']
+
+function generateDocumentNumber(type = 'budget') {
   const map = getManausParts()
   const shortYear = map.year.slice(-2)
   const datePart = `${map.day}${map.month}${shortYear}`
   const timePart = `${map.hour}${map.minute}`
   const uniquePart = crypto.randomUUID().slice(0, 4).toUpperCase()
 
-  return `ORC-${datePart}-${timePart}-${uniquePart}`
+  const prefix = DOCUMENT_TYPES[type]?.prefix || DOCUMENT_TYPES.budget.prefix
+
+  return `${prefix}-${datePart}-${timePart}-${uniquePart}`
 }
 
 function formatIssuedAt(value) {
@@ -42,7 +60,9 @@ function formatIssuedAt(value) {
   return `${day}/${month}/${year} ${time || '00:00'}`
 }
 
-function createInitialState() {
+function createInitialState(type = 'budget') {
+  const documentType = DOCUMENT_TYPES[type] ? type : 'budget'
+
   return {
     company: {
       name: 'MULTIFRIO',
@@ -54,13 +74,18 @@ function createInitialState() {
       zipCode: '69084-370',
     },
     document: {
-      title: 'Orçamento',
-      number: generateDocumentNumber(),
+      type: documentType,
+      title: DOCUMENT_TYPES[documentType].title,
+      number: generateDocumentNumber(documentType),
       issuedAt: getManausDateTimeLocal(),
-      validity: '90 dias',
+      validity: '30 dias',
+      warranty: '90 dias',
+      paymentMethod: 'Pix',
+      installments: '1',
     },
     customer: {
       name: '',
+      taxId: '',
       contact: '',
     },
     notes: '',
@@ -84,6 +109,7 @@ function App() {
   const [isCompanyEditorOpen, setIsCompanyEditorOpen] = useState(false)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [form, setForm] = useState(() => createInitialState())
+  const currentDocumentType = DOCUMENT_TYPES[form.document.type] || DOCUMENT_TYPES.budget
 
   const totals = useMemo(() => {
     const total = form.services.reduce(
@@ -93,6 +119,14 @@ function App() {
 
     return { total }
   }, [form.services])
+  const receiptPaymentDescription =
+    form.document.paymentMethod === 'Cartão/Crédito'
+      ? `${form.document.paymentMethod} em ${form.document.installments || '1'}x`
+      : form.document.paymentMethod || 'Pix'
+  const receiptWarranty = form.document.warranty || '90 dias'
+  const receiptDeclaration = `Eu declaro ter recebido o valor de ${currency.format(
+    totals.total,
+  )} via ${receiptPaymentDescription}.`
 
   const setSection = (section, key, value) => {
     setForm((current) => ({
@@ -138,8 +172,35 @@ function App() {
     }))
   }
 
+  const handleDocumentTypeChange = (type) => {
+    const nextDocumentType = DOCUMENT_TYPES[type] ? type : 'budget'
+
+    setForm((current) => ({
+      ...current,
+      document: {
+        ...current.document,
+        type: nextDocumentType,
+        title: DOCUMENT_TYPES[nextDocumentType].title,
+        number: generateDocumentNumber(nextDocumentType),
+      },
+    }))
+    setIsPreviewOpen(false)
+  }
+
+  const handlePaymentMethodChange = (value) => {
+    setForm((current) => ({
+      ...current,
+      document: {
+        ...current.document,
+        paymentMethod: value,
+        installments:
+          value === 'Cartão/Crédito' ? current.document.installments || '1' : '1',
+      },
+    }))
+  }
+
   const handleReset = () => {
-    setForm(createInitialState())
+    setForm(createInitialState(form.document.type))
     setIsPreviewOpen(false)
   }
 
@@ -149,7 +210,7 @@ function App() {
         <div className="panel-header">
           <div>
             <p className="eyebrow">MULTIFRIO</p>
-            <h1>Gerador de orçamentos</h1>
+            <h1>Gerador de documentos</h1>
           </div>
           <div className="header-actions">
             <button
@@ -225,6 +286,26 @@ function App() {
         ) : null}
 
         <section className="panel-section">
+          <h2>Tipo de documento</h2>
+          <div className="document-type-toggle" role="group" aria-label="Tipo de documento">
+            <button
+              type="button"
+              className={form.document.type === 'budget' ? 'type-button active' : 'type-button'}
+              onClick={() => handleDocumentTypeChange('budget')}
+            >
+              Orçamento
+            </button>
+            <button
+              type="button"
+              className={form.document.type === 'receipt' ? 'type-button active' : 'type-button'}
+              onClick={() => handleDocumentTypeChange('receipt')}
+            >
+              Recibo
+            </button>
+          </div>
+        </section>
+
+        <section className="panel-section">
           <h2>Documento</h2>
           <div className="grid two-columns">
               <label>
@@ -242,7 +323,11 @@ function App() {
                     type="button"
                     className="secondary-button"
                     onClick={() =>
-                      setSection('document', 'number', generateDocumentNumber())
+                      setSection(
+                        'document',
+                        'number',
+                        generateDocumentNumber(form.document.type),
+                      )
                     }
                   >
                     Gerar novo
@@ -260,13 +345,63 @@ function App() {
                 onChange={(event) => setSection('document', 'issuedAt', event.target.value)}
               />
             </label>
-            <label>
-              Garantia
-              <input
-                value={form.document.validity}
-                onChange={(event) => setSection('document', 'validity', event.target.value)}
-              />
-            </label>
+            {form.document.type === 'budget' ? (
+              <label>
+                Validade do orçamento
+                <input
+                  value={form.document.validity}
+                  onChange={(event) => setSection('document', 'validity', event.target.value)}
+                />
+              </label>
+            ) : (
+              <>
+                <label>
+                  Garantia da mão de obra
+                  <select
+                    value={form.document.warranty}
+                    onChange={(event) => setSection('document', 'warranty', event.target.value)}
+                  >
+                    {WARRANTY_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Forma de pagamento
+                  <select
+                    value={form.document.paymentMethod}
+                    onChange={(event) => handlePaymentMethodChange(event.target.value)}
+                  >
+                    {PAYMENT_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {form.document.paymentMethod === 'Cartão/Crédito' ? (
+                  <label>
+                    Quantidade de vezes
+                    <select
+                      value={form.document.installments}
+                      onChange={(event) =>
+                        setSection('document', 'installments', event.target.value)
+                      }
+                    >
+                      {Array.from({ length: 12 }, (_, index) => String(index + 1)).map(
+                        (option) => (
+                          <option key={option} value={option}>
+                            {option}x
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                ) : null}
+              </>
+            )}
           </div>
         </section>
 
@@ -280,6 +415,15 @@ function App() {
                 onChange={(event) => setSection('customer', 'name', event.target.value)}
               />
             </label>
+            {form.document.type === 'receipt' ? (
+              <label>
+                CPF/CNPJ
+                <input
+                  value={form.customer.taxId}
+                  onChange={(event) => setSection('customer', 'taxId', event.target.value)}
+                />
+              </label>
+            ) : null}
             <label>
               Contato
               <input
@@ -352,23 +496,25 @@ function App() {
           </div>
         </section>
 
-        <section className="panel-section">
-          <h2>Observações</h2>
-          <label>
-            Texto final
-            <textarea
-              rows="4"
-              value={form.notes}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, notes: event.target.value }))
-              }
-            />
-          </label>
-        </section>
+        {form.document.type === 'budget' ? (
+          <section className="panel-section">
+            <h2>Observações</h2>
+            <label>
+              Texto final
+              <textarea
+                rows="4"
+                value={form.notes}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, notes: event.target.value }))
+                }
+              />
+            </label>
+          </section>
+        ) : null}
 
         <div className="action-row no-print">
           <button type="button" className="primary-button" onClick={() => setIsPreviewOpen(true)}>
-            Gerar PDF
+            {currentDocumentType.actionLabel}
           </button>
         </div>
       </aside>
@@ -396,7 +542,7 @@ function App() {
               </div>
             </div>
 
-            <section className="sheet">
+            <section className={form.document.type === 'receipt' ? 'sheet receipt-sheet' : 'sheet'}>
               <header className="sheet-header">
                 <div className="company-column">
                   <img src={logo} alt="Logo da MULTIFRIO" className="company-logo" />
@@ -433,6 +579,11 @@ function App() {
                     <p>
                       <strong>Cliente:</strong> {form.customer.name || '-'}
                     </p>
+                    {form.document.type === 'receipt' ? (
+                      <p>
+                        <strong>CPF/CNPJ:</strong> {form.customer.taxId || '-'}
+                      </p>
+                    ) : null}
                     <p>
                       <strong>Contato:</strong> {form.customer.contact || '-'}
                     </p>
@@ -472,19 +623,37 @@ function App() {
 
               <div className="totals-card">
                 <div className="grand-total">
-                  <span>Preço Final</span>
+                  <span>{form.document.type === 'receipt' ? 'Total recebido' : 'Preço Final'}</span>
                   <strong>{currency.format(totals.total)}</strong>
                 </div>
               </div>
 
               <section className="notes-area">
-                <p>
-                  <strong>Garantia da mão de obra:</strong> {form.document.validity}
-                </p>
-                <p>
-                  <strong>Observações</strong>
-                </p>
-                <p>{form.notes || '-'}</p>
+                {form.document.type === 'budget' ? (
+                  <>
+                    <p>
+                      <strong>Validade do orçamento:</strong> {form.document.validity}
+                    </p>
+                    <p>
+                      <strong>Observações</strong>
+                    </p>
+                    <p>{form.notes || '-'}</p>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      <strong>Garantia da mão de obra:</strong> {receiptWarranty}
+                    </p>
+                    <p>
+                      <strong>Declaração</strong>
+                    </p>
+                    <p>{receiptDeclaration}</p>
+                    <p className="receipt-thanks">
+                      A MULTIFRIO agradece a preferência e permanece à disposição para
+                      futuros serviços e atendimentos.
+                    </p>
+                  </>
+                )}
               </section>
 
               <footer className="signature-area">
