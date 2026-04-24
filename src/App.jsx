@@ -34,7 +34,7 @@ const DOCUMENT_TYPES = {
   },
 }
 
-const WARRANTY_OPTIONS = ['30 dias', '90 dias', '180 dias']
+const WARRANTY_OPTIONS = ['30 dias', '60 dias', '90 dias']
 const PAYMENT_OPTIONS = ['Dinheiro', 'Pix', 'Cartão/Débito', 'Cartão/Crédito']
 
 function generateDocumentNumber(type = 'budget') {
