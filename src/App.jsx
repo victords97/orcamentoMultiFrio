@@ -404,7 +404,9 @@ function App() {
                   <p>
                     <strong>CNPJ:</strong> {form.company.cnpj}
                   </p>
-                  <p>{form.company.phone}</p>
+                  <p>
+                    <strong>Telefone:</strong> {form.company.phone}
+                  </p>
                   <p>
                     <strong>Cidade:</strong> {form.company.city} <strong>Bairro:</strong>{' '}
                     {form.company.neighborhood} <strong>Estado:</strong> {form.company.state}
@@ -438,33 +440,35 @@ function App() {
                 </div>
               </header>
 
-              <table className="services-table">
-                <thead>
-                  <tr>
-                    <th>Serviços</th>
-                    <th>Preço</th>
-                    <th>Quantidade</th>
-                    <th>Valor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {form.services.map((service) => {
-                    const total =
-                      Number(service.price || 0) * Number(service.quantity || 0)
+              <div className="table-scroll">
+                <table className="services-table">
+                  <thead>
+                    <tr>
+                      <th>Serviços</th>
+                      <th>Preço</th>
+                      <th>Quantidade</th>
+                      <th>Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {form.services.map((service) => {
+                      const total =
+                        Number(service.price || 0) * Number(service.quantity || 0)
 
-                    return (
-                      <tr key={service.id}>
-                        <td className="description-cell">
-                          {service.description || 'Serviço sem descrição'}
-                        </td>
-                        <td>{currency.format(Number(service.price || 0))}</td>
-                        <td>{String(Math.trunc(Number(service.quantity || 0)))}</td>
-                        <td>{currency.format(total)}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                      return (
+                        <tr key={service.id}>
+                          <td className="description-cell">
+                            {service.description || 'Serviço sem descrição'}
+                          </td>
+                          <td>{currency.format(Number(service.price || 0))}</td>
+                          <td>{String(Math.trunc(Number(service.quantity || 0)))}</td>
+                          <td>{currency.format(total)}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
               <div className="totals-card">
                 <div className="grand-total">

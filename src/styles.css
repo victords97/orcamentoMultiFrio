@@ -289,9 +289,15 @@ textarea {
   gap: 6px;
 }
 
+.table-scroll {
+  margin-top: 22px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .services-table {
   width: 100%;
-  margin-top: 22px;
+  min-width: 620px;
   border-collapse: collapse;
   font-size: 0.92rem;
 }
@@ -427,6 +433,15 @@ textarea {
     width: 100%;
   }
 
+  .table-scroll {
+    margin-top: 18px;
+  }
+
+  .services-table {
+    min-width: 560px;
+    font-size: 0.86rem;
+  }
+
   .panel-header,
   .section-title-row,
   .pdf-modal-toolbar {
@@ -448,11 +463,12 @@ textarea {
 @media print {
   @page {
     size: A4;
-    margin: 0;
+    margin: 8mm;
   }
 
   body {
     background: #fff;
+    margin: 0 !important;
   }
 
   .no-print {
@@ -486,10 +502,33 @@ textarea {
   }
 
   .sheet {
-    width: 210mm;
-    min-height: 297mm;
+    width: 100%;
+    min-height: auto;
     margin: 0;
+    padding: 10mm;
     box-shadow: none;
     border: 3px solid #1f2937;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+    page-break-after: avoid;
+    overflow: visible;
+  }
+
+  .services-table {
+    margin-top: 18px;
+  }
+
+  .services-table th,
+  .services-table td {
+    padding: 8px 6px;
+  }
+
+  .notes-area {
+    margin-top: 28px;
+    gap: 8px;
+  }
+
+  .signature-area {
+    margin-top: 36px;
   }
 }
