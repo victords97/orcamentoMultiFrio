@@ -67,7 +67,7 @@ function createInitialState(type = 'budget') {
     company: {
       name: 'MULTIFRIO',
       cnpj: '45.735.139/0001-11',
-      phone: '(92) 9 9174-9101',
+      phone: '92 99174-9107',
       city: 'MANAUS-AM',
       neighborhood: 'ZUMBI DOS PALMARES',
       state: 'AMAZONAS',
